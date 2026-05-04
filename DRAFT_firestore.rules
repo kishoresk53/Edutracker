@@ -1,0 +1,124 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(data) {
+      return isSignedIn() && data.ownerId == request.auth.uid;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Student Entity ---
+
+    function isValidStudent(data) {
+      return data.keys().hasAll(['name', 'studentId', 'department', 'year', 'ownerId', 'createdAt', 'updatedAt'])
+        && data.keys().size() == 7
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 100
+        && data.studentId is string && data.studentId.size() > 0 && data.studentId.size() <= 50
+        && data.department is string && data.department.size() > 0 && data.department.size() <= 100
+        && data.year is number && data.year >= 1 && data.year <= 10
+        && data.ownerId == request.auth.uid
+        && data.createdAt == request.time
+        && data.updatedAt == request.time;
+    }
+
+    match /students/{studentId} {
+      allow get: if isOwner(existing());
+      allow list: if isOwner(existing());
+      
+      allow create: if isSignedIn() && isValidStudent(incoming());
+      
+      allow update: if isOwner(existing()) 
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().keys().hasAll(['name', 'studentId', 'department', 'year', 'ownerId', 'createdAt', 'updatedAt'])
+        && incoming().keys().size() == 7
+        && incoming().name is string && incoming().name.size() <= 100
+        && incoming().department is string && incoming().department.size() <= 100
+        && incoming().year is number && incoming().year >= 1 && incoming().year <= 10;
+        
+      allow delete: if isOwner(existing());
+    }
+
+    // --- Performance Entity ---
+
+    function isValidPerformance(data) {
+      return data.keys().hasAll(['studentId', 'subject', 'marks', 'totalMarks', 'semester', 'ownerId', 'createdAt', 'updatedAt'])
+        && data.keys().size() == 8
+        && data.studentId is string && data.studentId.size() <= 128
+        && data.subject is string && data.subject.size() <= 100
+        && data.marks is number && data.marks >= 0
+        && data.totalMarks is number && data.totalMarks > 0
+        && data.marks <= data.totalMarks
+        && data.semester is number && data.semester >= 1 && data.semester <= 20
+        && data.ownerId == request.auth.uid
+        && data.createdAt == request.time
+        && data.updatedAt == request.time;
+    }
+
+    match /performances/{perfId} {
+      allow get: if isOwner(existing());
+      allow list: if isOwner(existing());
+
+      allow create: if isSignedIn() && isValidPerformance(incoming())
+        && exists(/databases/$(database)/documents/students/$(incoming().studentId));
+
+      allow update: if isOwner(existing())
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().studentId == existing().studentId
+        && incoming().keys().hasAll(['studentId', 'subject', 'marks', 'totalMarks', 'semester', 'ownerId', 'createdAt', 'updatedAt'])
+        && incoming().keys().size() == 8
+        && incoming().subject is string && incoming().subject.size() <= 100
+        && incoming().marks is number && incoming().marks >= 0 && incoming().marks <= incoming().totalMarks
+        && incoming().totalMarks is number && incoming().totalMarks > 0;
+
+      allow delete: if isOwner(existing());
+    }
+
+    // --- Insight Entity ---
+
+    function isValidInsight(data) {
+      return data.keys().hasAll(['studentId', 'analysis', 'ownerId', 'createdAt'])
+        && data.keys().size() == 4
+        && data.studentId is string && data.studentId.size() <= 128
+        && data.analysis is string && data.analysis.size() <= 10000
+        && data.ownerId == request.auth.uid
+        && data.createdAt == request.time;
+    }
+
+    match /insights/{insightId} {
+      allow get: if isOwner(existing());
+      allow list: if isOwner(existing());
+      
+      allow create: if isSignedIn() && isValidInsight(incoming())
+        && exists(/databases/$(database)/documents/students/$(incoming().studentId));
+      
+      // Insights are immutable for users - only create/delete (AI generated)
+      allow update: if false;
+      allow delete: if isOwner(existing());
+    }
+  }
+}

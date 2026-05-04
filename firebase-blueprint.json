@@ -1,0 +1,63 @@
+{
+  "entities": {
+    "student": {
+      "title": "Student",
+      "description": "Basic information about a student",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Student's full name" },
+        "studentId": { "type": "string", "description": "Unique college ID" },
+        "department": { "type": "string", "description": "Academic department" },
+        "year": { "type": "number", "description": "Current year of study" },
+        "email": { "type": "string", "format": "email", "description": "Student email" },
+        "ownerId": { "type": "string", "description": "UID of the user who manages this student record" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "studentId", "department", "year", "ownerId"]
+    },
+    "performance": {
+      "title": "Performance",
+      "description": "Academic performance data for a specific subject",
+      "type": "object",
+      "properties": {
+        "studentId": { "type": "string", "description": "Reference to the student" },
+        "subject": { "type": "string", "description": "Subject name" },
+        "marks": { "type": "number", "description": "Marks obtained" },
+        "totalMarks": { "type": "number", "description": "Total possible marks" },
+        "semester": { "type": "number", "description": "Semester number" },
+        "ownerId": { "type": "string", "description": "UID of the user who manages this record" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["studentId", "subject", "marks", "totalMarks", "semester", "ownerId"]
+    },
+    "insight": {
+      "title": "Insight",
+      "description": "AI-generated performance insights",
+      "type": "object",
+      "properties": {
+        "studentId": { "type": "string", "description": "Reference to the student" },
+        "analysis": { "type": "string", "description": "The AI analysis text" },
+        "gpa": { "type": "number", "description": "Calculated GPA" },
+        "ownerId": { "type": "string", "description": "UID of the user who manages this record" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["studentId", "analysis", "ownerId"]
+    }
+  },
+  "firestore": {
+    "/students/{studentDocId}": {
+      "schema": "student",
+      "description": "Collection of student records"
+    },
+    "/performances/{perfId}": {
+      "schema": "performance",
+      "description": "Collection of academic performance records"
+    },
+    "/insights/{insightId}": {
+      "schema": "insight",
+      "description": "Collection of AI-generated insights"
+    }
+  }
+}
